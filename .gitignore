@@ -1,2 +1,3 @@
 # Exclude generated data files (no reason to sync them via git)
 *.dat
+*.gitignore~
