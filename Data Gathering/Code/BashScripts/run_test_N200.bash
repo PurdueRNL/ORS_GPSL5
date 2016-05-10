@@ -41,14 +41,14 @@ while ((lcv <= ntime)); do
 
     # LHCP
     ofile1="../../Data/XMTest_${tstamp}.dat" # File name of datafile
-    #rfile="../../Data/XMTest_${tstamp}.txt" # File name of log file
+    rfile="../../Data/XMTest_${tstamp}.txt" # File name of log file
 
     # Log the filename of the datafile created
     echo "Creating file...."
     echo $ofile1
 
     # Call C++ program that actually collects and writes the data to file
-    ../CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --file "$ofile1" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
+    ../CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --file "$ofile1" --rfile "$rfile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
     # Using double quotes for string variables so the command doesn't split them at commas
     let lcv=lcv+1 # Increment lcv
 done
