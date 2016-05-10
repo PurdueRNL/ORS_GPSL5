@@ -1,5 +1,8 @@
 # Exclude backup .gitignore file
 *.gitignore~
 
-# Exclude generated data (no reason to sync that over git)
-'Data Gathering'/Data/
+# Exclude generated data
+*.dat
+
+# Exclude text files (logs)
+*.txt
