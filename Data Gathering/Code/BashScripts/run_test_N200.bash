@@ -48,9 +48,7 @@ while ((lcv <= ntime)); do
     echo $ofile1
 
     # Call C++ program that actually collects and writes the data to file
-        /home/rnl_lab/Desktop/Test/Code/CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --file "$ofile1" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
-        # Using double quotes for string variables so the command doesn't split them at commas
+    ../CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --file "$ofile1" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
+    # Using double quotes for string variables so the command doesn't split them at commas
     let lcv=lcv+1 # Increment lcv
 done
-
-

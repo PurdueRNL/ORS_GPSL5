@@ -48,27 +48,7 @@ while ((lcv <= ntime)); do
     echo $ofile1
 
     # Call C++ program that actually collects and writes the data to file
-# why is this loop inside the while loop?
-#what is 'seq 1 3'?
-#why is 'i' never used?
-    #for i in `seq 1 3`;
-        #do
-            /home/rnl_lab/Desktop/Test/Code/CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --file "$ofile1" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
-            # Using double quotes for string variables so the command doesn't split them at commas
-
-            ## Remove files with dropped data sections and try again
-            #read nover < $rfile
-            #echo $nover
-
-            #if [ $nover -eq 0 ]
-            #then
-            #break
-            #fi
-            #echo "Overflow Detected. Retrying..."
-            #rm $ofile1
-
-        #done 
+    ../CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --file "$ofile1" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
+        # Using double quotes for string variables so the command doesn't split them at commas
     let lcv=lcv+1 # Increment lcv
 done
-
-

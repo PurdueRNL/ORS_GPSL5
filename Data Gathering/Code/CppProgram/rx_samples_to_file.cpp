@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// Includes
 #include <uhd/types/tune_request.hpp>
 #include <uhd/utils/thread_priority.hpp>
 #include <uhd/convert.hpp>
@@ -57,7 +58,8 @@ void benchmark_rx_rate(
     uhd::usrp::multi_usrp::sptr usrp,
     const std::string &rx_cpu,
     uhd::rx_streamer::sptr rx_stream,
-    const std::string &file1, const std::string &file2, size_t num_of_samps){
+    const std::string &file,
+    size_t num_of_samps){
 
     uhd::set_thread_priority_safe();
 
@@ -77,10 +79,7 @@ void benchmark_rx_rate(
 
     // create a separate output file for each channel
     std::ofstream outfile[num_chan];
-    //for (size_t i=0; i<num_chan; i++)
-      //  outfile[i].open((boost::format("%u%s") % i % file ).str().c_str(), std::ofstream::binary);
-      outfile[0].open((boost::format("%s") % file1 ).str().c_str(), std::ofstream::binary);
-      outfile[1].open((boost::format("%s") % file2 ).str().c_str(), std::ofstream::binary);
+    outfile[0].open((boost::format("%s") % file ).str().c_str(), std::ofstream::binary);
 
 
     bool had_an_overflow = false;
@@ -331,8 +330,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     uhd::set_thread_priority_safe();
 
     //variables to be set by po
-    std::string args, file1, file2, rfile, ant, subdev, ref, wirefmt, cpufmt, channel_list;
-    size_t total_num_samps; //, spb;
+    std::string args, file, rfile, ant, subdev, ref, wirefmt, cpufmt, channel_list;
+    size_t total_num_samps;
     double rate, freq, gain, bw, total_time, setup_time;
 
     //setup the program options
@@ -340,8 +339,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     desc.add_options()
         ("help", "help message")
         ("args", po::value<std::string>(&args)->default_value(""), "multi uhd device address args")
-        ("file1", po::value<std::string>(&file1)->default_value("usrp_samples_A.dat"), "name of the file 1 to write binary samples to")
-        ("file2", po::value<std::string>(&file2)->default_value("usrp_samples_B.dat"), "name of the file 2 to write binary samples to")
+        ("file", po::value<std::string>(&file)->default_value("usrp_samples_A.dat"), "name of the file to write binary samples to")
         ("rfile", po::value<std::string>(&rfile)->default_value("usrp_log.txt"), "name of the file to write overflow info to")
         ("nsamps", po::value<size_t>(&total_num_samps)->default_value(0), "total number of samples to receive")
         ("time", po::value<double>(&total_time)->default_value(0), "total number of seconds to receive")
@@ -386,7 +384,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     //create a usrp device
     std::cout << std::endl;
-    std::cout << boost::format("Creating the usrp device with: %s...") % args << std::endl;
+    std::cout << boost::format("Creating the usrp device with: %s") % args << std::endl;
     uhd::usrp::multi_usrp::sptr usrp = uhd::usrp::multi_usrp::make(args);
 
     //Lock mboard clocks
@@ -492,7 +490,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     //spawn the receive test thread
     boost::thread_group thread_group;
-    thread_group.create_thread(boost::bind(&benchmark_rx_rate, usrp, cpufmt, rx_stream, file1, file2, total_num_samps));
+    thread_group.create_thread(boost::bind(&benchmark_rx_rate, usrp, cpufmt, rx_stream, file, total_num_samps));
 
     //Wait for the desired time interval and then stop the receive test thread
     //Also, monitor the progress along the way
