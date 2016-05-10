@@ -1,8 +1,5 @@
-# Exclude generated data files (no reason to sync them via git)
-*.dat
-
 # Exclude backup .gitignore file
 *.gitignore~
 
-# Exclude generated log file
-usrp_log.txt
+# Exclude generated data (no reason to sync that over git)
+'Data Gathering'/Data/

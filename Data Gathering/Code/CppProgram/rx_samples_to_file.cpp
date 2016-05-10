@@ -334,7 +334,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     size_t total_num_samps;
     double rate, freq, gain, bw, total_time, setup_time;
 
-    //setup the program options
+    // Grab program options from the command line
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help", "help message")
