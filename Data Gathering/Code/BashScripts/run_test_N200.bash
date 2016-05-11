@@ -5,7 +5,7 @@
 freqIn=1.57542 # GHz
 rateIn=50 # MHz
 gain=40 # dB
-rtime=10 # Seconds
+rtime=10 # sec
 addr="addr=192.168.10.2" # Local IP address of the N200
 dtype="sc8" # Data type
 
