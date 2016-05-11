@@ -189,18 +189,18 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 	std::cout << boost::format("Time: %d") % (thread_group.size()) << std::endl;   
 	
 	
-	// Print setting
-	std::cout << boost::format("         	Set	Ch 1	Ch 2	Unit") <<std::endl;    
+	// Display settings
+    std::cout << std::endl
 	std::cout << boost::format("File     	%s") % file << std::endl;	
-	std::cout << boost::format("Time     	%0.1f			Sec") % time << std::endl;
-	std::cout << boost::format("Channel		%d/%d	%d	%d") % (rx_stream->get_num_channels()) % (usrp->get_rx_num_channels()) % (channel_nums[0]) % (channel_nums[1])<< std::endl;
+	std::cout << boost::format("Time     	%0.1f	Sec") % total_time << std::endl;
+	std::cout << boost::format("Channel		%d/%d	%d") % (usrp->get_rx_num_channels()) % (channel_nums[0]) % (channel_nums[1])<< std::endl;
 	std::cout << boost::format("Buff		%d") % (rx_stream->get_max_num_samps()) << std::endl;
-	std::cout << boost::format("Wire/CPU	%d/%d			Bytes") % (uhd::convert::get_bytes_per_item(wirefmt)) % (uhd::convert::get_bytes_per_item(cpufmt)) << std::endl;	
-	std::cout << boost::format("Cpu rate	%0.1f			MB/sec")  % (cpu_rate/1e6) << std::endl;	
-	std::cout << boost::format("Rate     	%0.1f	%0.1f		MHz") % (rate/1e6) % (usrp->get_rx_rate()/1e6) << std::endl;	
-	std::cout << boost::format("Gain     	%0.1f	%0.1f 	dB") % gain % usrp->get_rx_gain(0)<< std::endl;
-	std::cout << boost::format("Frequency	%0.1f	%0.1f 	MHz") % (freq/1e6) % (usrp->get_rx_freq(0)/1e6) << std::endl;
-	std::cout << boost::format("Bandwidth	%0.1f	%0.1f 	MHz") % (bw/1e6) % (usrp->get_rx_bandwidth(0)/1e6) << std::endl;
+	std::cout << boost::format("Wire/CPU	%d/%d	Bytes") % (uhd::convert::get_bytes_per_item(wirefmt)) % (uhd::convert::get_bytes_per_item(cpufmt)) << std::endl;	
+	std::cout << boost::format("Cpu rate	%0.1f	MB/sec")  % (cpu_rate/1e6) << std::endl;	
+	std::cout << boost::format("Rate     	%0.1f	MHz") % (usrp->get_rx_rate()/1e6) << std::endl;	
+	std::cout << boost::format("Gain     	%0.1f	dB") % usrp->get_rx_gain(0)<< std::endl;
+	std::cout << boost::format("Frequency	%0.1f	MHz") % (usrp->get_rx_freq(0)/1e6) << std::endl;
+	std::cout << boost::format("Bandwidth	%0.1f	MHz") % (usrp->get_rx_bandwidth(0)/1e6) << std::endl << std::endl;
 
 	size_t f = 0;
 	while (f < (total_time*10)) {
@@ -208,15 +208,15 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 		if ((acc_rx_samps>rate) || (f==0)){
 			
 			if (outfile[0].is_open()) outfile[0].close();
-			if (outfile[1].is_open()) outfile[1].close();
 						
 			time(&rawtime);
 			timeinfo = localtime (&rawtime);
 			strftime(time_str,18,"%Y%m%dT%H%M%SZ",timeinfo);
 	 
-			outfile[0].open((boost::format("%s_%s") % file % time_str).str().c_str(), std::ofstream::binary);
-			std::cout << boost::format("Time:%d %s :: %d/%d %d/%d") % f % time_str % acc_rx_samps %rate % num_overflows % num_normal<< std::endl;   
+			outfile[0].open((boost::format("%s") % file).str().c_str(), std::ofstream::binary);
+			std::cout << boost::format("Time:%d %s :: %d/%d %d/%d") % f % time_str % acc_rx_samps %rate % num_overflows % num_normal << std::endl;   
 			
+            // overflow checking
 			if (num_overflows>3) {
 				cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
 				rx_stream->issue_stream_cmd(cmd);
