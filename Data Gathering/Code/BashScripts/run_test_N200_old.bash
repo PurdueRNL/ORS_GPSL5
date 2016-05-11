@@ -37,14 +37,24 @@ lcv=1 # How many datafiles have been read
 
 # Record Data for $rtime seconds
 while ((lcv <= ntime)); do
-    # Get computer time (for file naming)
-    tstamp=$(date "+%Y%m%d%H%M%S")
+    tstamp=$(date "+%Y%m%d%H%M%S") # Get computer time (for file naming)
 
     # Assign file names and locations
     ofile="../../Data/XMTest_${tstamp}.dat" # File name of datafile
+    rfile="../../Data/XMTest_${tstamp}.txt" # File name of log file
 
     # Call C++ program that actually collects and writes the data to file
-    ../CppProgram/rx_multi_samplesv3 --args "$addr" --time $rtime --rate $rate --subdev "$subdev" --freq $freq --file "$ofile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
+    ../CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --file "$ofile" --rfile "$rfile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype" # Uses double quotes for string variables so the command doesn't split them at commas
 
-    let lcv=$lcv+1
+    # Check if data has drops or overflows
+    read logData < $rfile # If rfile has anything in it, there were drops or overflows
+
+    if [ $logData != 0 ]; then
+        rm $ofile # Remove datafile
+        echo "Bad data. Removing and retrying ($lcv/$ntime)..."
+    else
+        echo "Data collected ($lcv/$ntime)"
+        let lcv=lcv+1 # increment lcv
+    fi
+    rm $rfile # Remove log file
 done

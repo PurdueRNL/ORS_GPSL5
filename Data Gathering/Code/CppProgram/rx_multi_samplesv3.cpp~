@@ -217,7 +217,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 			outfile[0].open((boost::format("%s_%s") % file % time_str).str().c_str(), std::ofstream::binary);
 			std::cout << boost::format("Time:%d %s :: %d/%d %d/%d") % f % time_str % acc_rx_samps %rate % num_overflows % num_normal<< std::endl;   
 			
-            // overflow checking
 			if (num_overflows>3) {
 				cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
 				rx_stream->issue_stream_cmd(cmd);

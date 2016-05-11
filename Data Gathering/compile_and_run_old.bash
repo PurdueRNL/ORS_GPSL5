@@ -5,7 +5,7 @@ sudo ifconfig eth0 192.168.10.1
 
 # Compile cpp file
 cd Code/CppProgram
-g++ rx_multi_samplesv3.cpp -luhd -lpthread -lboost_program_options -lboost_filesystem -lboost_thread -lboost_serialization -lboost_system -o rx_multi_samplesv3
+sudo ./rx_comp.bash
 
 # Begin data collection
 cd ../BashScripts
