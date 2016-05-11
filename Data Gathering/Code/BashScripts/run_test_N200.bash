@@ -4,7 +4,7 @@
 
 freqIn=1.57542 # GHz
 rateIn=50 # MHz
-gain=40
+gain=40 # dB
 rtime=10 # Seconds
 addr="addr=192.168.10.2" # Local IP address of the N200
 dtype="sc8" # Data type
@@ -27,28 +27,34 @@ echo "Frequency: $freq"
 echo "Rate: $rate"
 echo "Gain: $gain"
 
-# Compute number of times to run to make it up to $rtime seconds
+# Number of datafiles to generate
 let ntime=$rateIn/$rtime
 
 # Read XM data
-echo "Writing XM signal to file..."
+echo "Collecting $ntime datafiles..."
 
-lcv=1 # Variable to keep track of how many datafiles have been read
+lcv=1 # How many datafiles have been read
 
 # Record Data for $rtime seconds
 while ((lcv <= ntime)); do
     tstamp=$(date "+%Y%m%d%H%M%S") # Get computer time (for file naming)
 
-    # LHCP
-    ofile1="../../Data/XMTest_${tstamp}.dat" # File name of datafile
+    # Assign file names and locations
+    ofile="../../Data/XMTest_${tstamp}.dat" # File name of datafile
     rfile="../../Data/XMTest_${tstamp}.txt" # File name of log file
 
-    # Log the filename of the datafile created
-    echo "Creating file...."
-    echo $ofile1
-
     # Call C++ program that actually collects and writes the data to file
-    ../CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --file "$ofile1" --rfile "$rfile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
-    # Using double quotes for string variables so the command doesn't split them at commas
-    let lcv=lcv+1 # Increment lcv
+    ../CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --file "$ofile" --rfile "$rfile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype" # Uses double quotes for string variables so the command doesn't split them at commas
+
+    # Check if data has drops or overflows
+    read logData < $rfile # If rfile has anything in it, there were drops or overflows
+
+    if [ $logData != 0 ]; then
+        rm $ofile # Remove datafile
+        echo "Bad data. Removing and retrying ($lcv/$ntime)..."
+    else
+        echo "Data collected ($lcv/$ntime)"
+        let lcv=lcv+1 # increment lcv
+    fi
+    rm $rfile # Remove log file
 done

@@ -528,7 +528,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     std::ofstream logfile;
 
       logfile.open((boost::format("%s") % rfile ).str().c_str());
-       logfile << boost::format("%u") % num_overflows;
+       logfile << boost::format("%u") % (num_dropped_samps + num_overflows);
        logfile.close();
     //finished
     std::cout << std::endl << "Done!" << std::endl << std::endl;
