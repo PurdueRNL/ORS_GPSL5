@@ -142,7 +142,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 	uhd::stream_args_t stream_args(cpufmt,wirefmt);
     stream_args.channels = channel_nums;
     uhd::rx_streamer::sptr rx_stream = usrp->get_rx_stream(stream_args);
-	const size_t samps_per_buff = rate;
+	const size_t samps_per_buff = rate*total_time;
 	const size_t samps_per_temp = rate; 	
 	//print pre-test info
     double wire_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(wirefmt);
@@ -190,20 +190,20 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 	
 	
 	// Display settings
-    std::cout << std::endl
-	std::cout << boost::format("File     	%s") % file << std::endl;	
-	std::cout << boost::format("Time     	%0.1f	Sec") % total_time << std::endl;
-	std::cout << boost::format("Channel		%d/%d	%d") % (usrp->get_rx_num_channels()) % (channel_nums[0]) % (channel_nums[1])<< std::endl;
-	std::cout << boost::format("Buff		%d") % (rx_stream->get_max_num_samps()) << std::endl;
-	std::cout << boost::format("Wire/CPU	%d/%d	Bytes") % (uhd::convert::get_bytes_per_item(wirefmt)) % (uhd::convert::get_bytes_per_item(cpufmt)) << std::endl;	
-	std::cout << boost::format("Cpu rate	%0.1f	MB/sec")  % (cpu_rate/1e6) << std::endl;	
-	std::cout << boost::format("Rate     	%0.1f	MHz") % (usrp->get_rx_rate()/1e6) << std::endl;	
-	std::cout << boost::format("Gain     	%0.1f	dB") % usrp->get_rx_gain(0)<< std::endl;
-	std::cout << boost::format("Frequency	%0.1f	MHz") % (usrp->get_rx_freq(0)/1e6) << std::endl;
-	std::cout << boost::format("Bandwidth	%0.1f	MHz") % (usrp->get_rx_bandwidth(0)/1e6) << std::endl << std::endl;
+    std::cout << std::endl;
+    std::cout << boost::format("File        %s") % file << std::endl;
+    std::cout << boost::format("Channels    %d") % (usrp->get_rx_num_channels())<< std::endl;
+    std::cout << boost::format("Time        %0.1f	Sec") % total_time << std::endl;
+    std::cout << boost::format("CPU rate    %0.1f	MB/sec")  % (cpu_rate/1e6) << std::endl;
+    std::cout << boost::format("Wire fmt    %d		Bytes") % (uhd::convert::get_bytes_per_item(wirefmt)) << std::endl;
+    std::cout << boost::format("CPU fmt     %d		Bytes") % (uhd::convert::get_bytes_per_item(cpufmt)) << std::endl;
+    std::cout << boost::format("Gain        %0.1f	dB") % usrp->get_rx_gain(0)<< std::endl;
+    std::cout << boost::format("Rate        %0.1f	MHz") % (usrp->get_rx_rate()/1e6) << std::endl;
+    std::cout << boost::format("Frequency   %0.1f	MHz") % (usrp->get_rx_freq(0)/1e6) << std::endl;
+    std::cout << boost::format("Bandwidth   %0.1f		MHz") % (usrp->get_rx_bandwidth(0)/1e6) << std::endl << std::endl;
 
 	size_t f = 0;
-	while (f < (total_time*10)) {
+	while (f < 1) {
 		
 		if ((acc_rx_samps>rate) || (f==0)){
 			
