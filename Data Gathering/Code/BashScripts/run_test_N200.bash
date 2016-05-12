@@ -21,12 +21,6 @@ rate=$(echo "$rateIn*1000000" | bc) # Convert rate from MHz to Hz
 subdev="A:0" # Set subdev
 nsamp=$(($rate*$rtime)) # Compute number of samples in each datafile
 
-# Print values to screen (for debugging)
-echo "Setting parameters..."
-echo "Frequency: $freq"
-echo "Rate: $rate"
-echo "Gain: $gain"
-
 # Number of datafiles to generate
 let ntime=$rateIn/$rtime
 
@@ -42,9 +36,12 @@ while ((lcv <= ntime)); do
 
     # Assign file names and locations
     ofile="../../Data/XMTest_${tstamp}.dat" # File name of datafile
+    
+    echo "Collecting file $lcv/$ntime..."
 
     # Call C++ program that actually collects and writes the data to file
     ../CppProgram/rx_multi_samplesv3 --args "$addr" --time $rtime --rate $rate --subdev "$subdev" --freq $freq --file "$ofile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
 
+    # Increment lcv
     let lcv=$lcv+1
 done

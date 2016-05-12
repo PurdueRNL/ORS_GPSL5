@@ -185,8 +185,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 	char time_str [18];
 	
 	//spawn the receive test thread
-    boost::thread_group thread_group;
-	std::cout << boost::format("Time: %d") % (thread_group.size()) << std::endl;   
+    //boost::thread_group thread_group;
+	//std::cout << boost::format("Time: %d") % (thread_group.size()) << std::endl;   
 	
 	
 	// Display settings
@@ -264,6 +264,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 			outfile[i].flush();			
 		}
 
+        if (had_an_overflow) {
+            num_dropped_samps += (md.time_spec - last_time).to_ticks(rate);
+            std::cout << "D";
+            had_an_overflow = false;
+        }
+        
 		switch(md.error_code){
 			case uhd::rx_metadata_t::ERROR_CODE_NONE:
 				num_normal++;
@@ -271,9 +277,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
 			case uhd::rx_metadata_t::ERROR_CODE_OVERFLOW:
 				num_overflows++;
+                had_an_overflow = true;
 				break;
+
+            case uhd::rx_metadata_t::ERROR_CODE_BAD_PACKET:
+                num_dropped_samps++;
+                std::cout << "D" << std::endl;
+                break;
 		}
-		
 	}
 	
 	if (outfile[0].is_open()) outfile[0].close();
