@@ -9,7 +9,7 @@ fI=0000000;% intermediate frequency
 fD=0;
 Ti=0.001;% integration time
 sample_num=floor(fs*Ti); 
-pfile=fopen('/home/rnl_lab/Desktop/Test/Data/XMTest_20160513163944.dat');
+pfile=fopen('/home/rnl_lab/ORS_GPSL5/Data Gathering/Data/XMTest_20160513181705.dat');
 xR=[];
 xR2=[];
 for i=1:sample_num
@@ -54,10 +54,10 @@ IL(j)=2^0.5*cos(2*pi*(fI+fD(i))*j/fs)*Sample(j);
 IQ(j)=2^0.5*sin(2*pi*(fI+fD(i))*j/fs)*Sample(j);
 end
 % correlation of complex signals, could be simplified by directly representing the complex number by I+li*Q    
-[RI_1, lag]= circcorr(xR,IL,1023000/fs);
-[RI_2, lag]= circcorr(xR2,IQ,1023000/fs);
-[RQ_1, lag]= circcorr(xR,IQ,1023000/fs);
-[RQ_2, lag]= circcorr(xR2,IL,1023000/fs);
+[RI_1, ~]= circcorr(xR,IL,1023000/fs);
+[RI_2, ~]= circcorr(xR2,IQ,1023000/fs);
+[RQ_1, ~]= circcorr(xR,IQ,1023000/fs);
+[RQ_2, ~]= circcorr(xR2,IL,1023000/fs);
 Z=(RI_1+RI_2).^2+(-RQ_1+RQ_2).^2;
 R(i,1:sample_num)=Z;
 [m(i),index(i)]=max(Z);
@@ -86,16 +86,16 @@ CN0=10*log10(peak/(N*Ti));
 % CN0=0;
 disp(CN0);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% [X,Y]=meshgrid(0:1023000/fs:Ti*1023000-1023000/fs,minFreq:step:maxFreq);
-% figure;
-% mesh(X,Y,R);
-% xlabel('Delay/chip');
-% ylabel('Doppler/Hz');
-% zlabel('Correlation');
-% t1 = strcat('Correlation for PRN',num2str(PRN));
-% title(t1);
-% xlim([0 Ti*1023000]);
-% ylim([minFreq maxFreq]);
+[X,Y]=meshgrid(0:1023000/fs:Ti*1023000-1023000/fs,minFreq:step:maxFreq);
+figure;
+mesh(X,Y,R);
+xlabel('Delay/chip');
+ylabel('Doppler/Hz');
+zlabel('Correlation');
+t1 = strcat('Correlation for PRN',num2str(PRN));
+title(t1);
+xlim([0 Ti*1023000]);
+ylim([minFreq maxFreq]);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 end
 
