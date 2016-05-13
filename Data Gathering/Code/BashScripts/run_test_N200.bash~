@@ -5,7 +5,7 @@
 freqIn=1.57542 # GHz
 rateIn=50 # MHz
 gain=40 # dB
-rtime=10 # sec
+rtime=1 # sec
 addr="addr=192.168.10.2" # Local IP address of the N200
 dtype="sc8" # Data type
 
@@ -42,5 +42,6 @@ while ((lcv <= ntime)); do
     # Call C++ program that actually collects and writes the data to file
     ../CppProgram/rx_multi_samplesv3 --args "$addr" --time $rtime --rate $rate --subdev "$subdev" --freq $freq --file "$ofile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
 
+    # Increment lcv
     let lcv=$lcv+1
 done

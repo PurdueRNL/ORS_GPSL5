@@ -1,47 +1,85 @@
 #!/bin/bash
 
+
 ## INPUTS ##
 
-freqIn=1.57542 # GHz
-rateIn=50 # MHz
-gain=40 # dB
-rtime=10 # sec
-addr="addr=192.168.10.2" # Local IP address of the N200
+freq=1.57542 # GHz
+rate=50 # MHz
+gain=40
+rtime=10 # Seconds
+addr="addr=192.168.10.2"
 dtype="sc8" # Data type
 
 ## END INPUTS ##
 
-# Allocate memory for storing the large datafiles
+
+clear
 sudo sysctl -w net.core.rmem_max=480000000
 sudo sysctl -w net.core.wmem_max=480000000
+#sudo ifconfig eth0 192.168.10.1
 
 ## XM Recording Parameters ##
-freq=$(echo "$freqIn*1000000000" | bc) # Convert frequency from GHz to Hz
-rate=$(echo "$rateIn*1000000" | bc) # Convert rate from MHz to Hz
-subdev="A:0" # Set subdev
-nsamp=$(($rate*$rtime)) # Compute number of samples in each datafile
+echo "Setting parameters..."
+freq=$(echo "$freq*1000000000" | bc)
+rate=$(echo "$rate*1000000" | bc)
+gain=$gain
+tstamp=$1 # get time stamp from first command line parameter
+subdev="A:0" # set subdev
+nsamp=$(($rate*$rtime)) # compute number of samples
 
-# Number of datafiles to generate
-let ntime=$rateIn/$rtime
+echo "Frequency: $freq"
+echo "Rate: $rate"
+echo "Gain: $gain"
+
+#freq=2000000000 # set center frequency
+#freq=1575420000 # 2343200000 set center frequency  GPS: 1575420000
+#rate=50000000 # set sampling rate
+#gain=40 # Set gain
+#addr="serial=F5C1CA, master_clock_rate=16e6" #set USRP and master
+#addr="addr=192.168.10.2"; clock rate
+#tstamp=$1 # get time stamp from first command line parameter
+#subdev="A:0" # set subdev
+#rtime=10 # recording time in seconds
+#rtime=$2 #get time to record from the main program
+#nsamp=$(($rate*$rtime)) # compute number of samples
+#dtype="sc8" # data type
+
+# Compute number of times to run to make it up to 16 seconds
+let ntime=50/$rtime
+
 
 # Read XM data
-echo "Collecting $ntime datafiles..."
 
-lcv=1 # How many datafiles have been read
+echo "Writing XM signal to file..."
 
-# Record Data for $rtime seconds
+
+lcv=1
+# Record Data for 16 seconds
 while ((lcv <= ntime)); do
-    # Get computer time (for file naming)
-    tstamp=$(date "+%Y%m%d%H%M%S")
+tstamp=$(date "+%Y%m%d%H%M%S")
+# LHCP
+ofile1="/home/rnl_lab/Desktop/Test/Data/XMTest_${tstamp}.dat" #file name string
+rfile="/home/rnl_lab/Desktop/Test/Data/XMTest_${tstamp}.txt" #log file to record number of overflows
+echo "Creating file...."
+echo $ofile1
 
-    # Assign file names and locations
-    ofile="../../Data/XMTest_${tstamp}.dat" # File name of datafile
-    
-    echo "Collecting file $lcv/$ntime..."
+for i in `seq 1 3`;
+do
+/home/rnl_lab/Desktop/Test/Code/CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --file "$ofile1" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype" # double quotes for string variables so the command doesn't split them at commas
 
-    # Call C++ program that actually collects and writes the data to file
-    ../CppProgram/rx_multi_samplesv3 --args "$addr" --time $rtime --rate $rate --subdev "$subdev" --freq $freq --file "$ofile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
+#read nover < $rfile
+#echo $nover
 
-    # Increment lcv
-    let lcv=$lcv+1
+#if [ $nover -eq 0 ]
+#then
+#break
+#fi
+#echo "Overflow Detected. Retrying..."
+#rm $ofile1
+
+done 
+let lcv=lcv+1
+#echo $lcv
 done
+
+

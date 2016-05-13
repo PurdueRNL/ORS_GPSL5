@@ -191,6 +191,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 	
 	// Display settings
     std::cout << std::endl;
+    std::cout << boost::format("Settings:") << std::endl;
     std::cout << boost::format("File        %s") % file << std::endl;
     std::cout << boost::format("Channels    %d") % (usrp->get_rx_num_channels())<< std::endl;
     std::cout << boost::format("Time        %0.1f	Sec") % total_time << std::endl;
@@ -213,8 +214,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 			timeinfo = localtime (&rawtime);
 			strftime(time_str,18,"%Y%m%dT%H%M%SZ",timeinfo);
 	 
+            // Open file (to write to it)
 			outfile[0].open((boost::format("%s") % file).str().c_str(), std::ofstream::binary);
-			std::cout << boost::format("Time:%d %s :: %d/%d %d/%d") % f % time_str % acc_rx_samps %rate % num_overflows % num_normal << std::endl;   
+
+            std::cout << boost::format("Results:") << std::endl;
+            std::cout << boost::format("Rate: %d") % rate << std::endl;
+            std::cout << boost::format("Samples accepted: %d") % acc_rx_samps << std::endl;
+            std::cout << boost::format("Overflows: %d") % num_overflows << std::endl;
+            std::cout << boost::format("Drops: %d") % num_dropped_samps << std::endl;
 			
             // overflow checking
 			if (num_overflows>3) {
@@ -242,8 +249,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 										usrp->get_rx_bandwidth(i)
 					};
 				
+                    // Write header to file
 					outfile[i].write((const char*)header, sizeof(header));
+
+                    // Write signal environment information to file
 					outfile[i].write((const char*)sig_env, sizeof(sig_env));
+
+                    // End header section
 					outfile[i].write((const char*)subend, sizeof(subend));		
 			}
 			
@@ -285,7 +297,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
                 std::cout << "D" << std::endl;
                 break;
 		}
-		
 	}
 	
 	if (outfile[0].is_open()) outfile[0].close();
