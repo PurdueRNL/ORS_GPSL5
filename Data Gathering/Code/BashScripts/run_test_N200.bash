@@ -20,10 +20,10 @@ nsamp=$(($rate*$rtime)) # compute number of samples
 
 let ntime=$rateIn/$rtime
 
-lcv=1
+run=1   
 
-while ((lcv <= ntime)); do
-    echo "Generating datafile $lcv/$ntime"
+while ((run <= ntime)); do
+    echo "Generating datafile $run/$ntime"
 
     # Get time for file naming
     tstamp=$(date "+%Y%m%d%H%M%S")
@@ -38,14 +38,16 @@ while ((lcv <= ntime)); do
     ../CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --rfile "$rfile" --file1 "$dfile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
 
     # Check for drops or overflows
+    # Grab value of drops+overflows from C++ program
     log=$(<$rfile)
-    echo $log
-    if (log==0) then
+    
+    # If there were no drops/overflows, save the datafile and continue - if there were, delete the datafile and retry
+    if (($log==0)); then
         rm $rfile
-        let lcv=lcv+1
+        let run=$run+1
     else
         rm $rfile
-        rm $ofile
+        rm $dfile
         echo "Bad data. Retrying..."
     fi
 done
