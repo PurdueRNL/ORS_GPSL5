@@ -56,7 +56,8 @@ void benchmark_rx_rate(
     uhd::usrp::multi_usrp::sptr usrp,
     const std::string &rx_cpu,
     uhd::rx_streamer::sptr rx_stream,
-    const std::string &file1, size_t num_of_samps){
+    const std::string &file1,
+    size_t num_of_samps){
 
     uhd::set_thread_priority_safe();
 
@@ -92,8 +93,7 @@ void benchmark_rx_rate(
     rx_stream->issue_stream_cmd(cmd);
     unsigned long long acc_samps = 0;
 
-    //while (not boost::this_thread::interruption_requested()) {
-    while(acc_samps < num_of_samps){
+    while(acc_samps < num_of_samps && num_dropped_samps == 0){
         unsigned long long tmp_num_samps = 0;
 
         try {
@@ -340,6 +340,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
         double etime1 = elapsed_time(now,start);
         if (etime1 > sleep_time) break;
+
+        if (num_dropped_samps != 0) break;
+
 
         if (bw_summary) {
             double etime2 = elapsed_time(now,previous);

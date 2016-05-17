@@ -10,7 +10,7 @@ Ti = 0.001; % integration time
 sample_num = floor(fs*Ti);
 
 % Open datafile
-pfile = fopen('/home/rnl_lab/ORS_GPSL5/Data Gathering/Data/XMTest_20160516070959.dat');
+pfile = fopen('/home/rnl_lab/ORS_GPSL5/Data Gathering/Data/XMTest_20160517091047.dat');
 
 xR = [];
 xR2 = [];
@@ -84,15 +84,15 @@ for PRN = 1:32
     CN0 = 10*log10(peak/(N*Ti));
     disp(CN0);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % [X,Y]=meshgrid(0:1023000/fs:Ti*1023000-1023000/fs,minFreq:step:maxFreq);
-    % figure;
-    % mesh(X,Y,R);
-    % xlabel('Delay/chip');
-    % ylabel('Doppler/Hz');
-    % zlabel('Correlation');
-    % t1 = strcat('Correlation for PRN',num2str(PRN));
-    % title(t1);
-    % xlim([0 Ti*1023000]);
-    % ylim([minFreq maxFreq]);
+%     [X,Y]=meshgrid(0:1023000/fs:Ti*1023000-1023000/fs,minFreq:step:maxFreq);
+%     figure;
+%     mesh(X,Y,R);
+%     xlabel('Delay/chip');
+%     ylabel('Doppler/Hz');
+%     zlabel('Correlation');
+%     t1 = strcat('Correlation for PRN',num2str(PRN));
+%     title(t1);
+%     xlim([0 Ti*1023000]);
+%     ylim([minFreq maxFreq]);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 end
