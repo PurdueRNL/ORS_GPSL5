@@ -323,7 +323,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     // Setup Ctrl-C interrupt handler 
     std::signal(SIGINT, &sig_int_handler);
-    std::cout << "Press Ctrl + C to stop streaming..." << std::endl << std::endl;
+    std::cout << "Press Ctrl + Z to abort..." << std::endl << std::endl;
 
     //spawn the receive test thread
     boost::thread_group thread_group;

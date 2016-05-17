@@ -341,10 +341,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         double etime1 = elapsed_time(now,start);
         if (etime1 > sleep_time) break;
 
-        if (num_dropped_samps != 0) {
-            std::cout << num_dropped_samps << std::endl;
-            break;
-        }
+        if (num_dropped_samps != 0) break;
 
 
         if (bw_summary) {
