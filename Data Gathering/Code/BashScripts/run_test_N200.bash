@@ -18,8 +18,9 @@ rate=$(echo "$rateIn*1000000" | bc) # Convert from MHz to Hz
 subdev="A:0" # Subdevice specification (parameter for USRP)
 nsamp=$(($rate*$rtime)) # Total number of samples to gather
 
-# Initialize loop counter variable
+# Initialize loop variables
 run=1
+attempt=1
 
 # Call binary program to collect data and check data for drops/overflows
 while ((run <= nfiles)); do
@@ -31,7 +32,7 @@ while ((run <= nfiles)); do
     rfile="../../Data/XMTest_${tstamp}.txt" # Log file
 
     clear
-    echo "Collecting datafile $run/$nfiles"
+    echo "Collecting datafile $run/$nfiles, attempt $attempt"
     echo "Creating file $dfile"
 
     # Run binary program, passing arguments through command line, to collect data
@@ -43,10 +44,12 @@ while ((run <= nfiles)); do
     # If there were no drops/overflows, save the datafile and continue - if there were, delete the datafile and retry
     if (($log==0)); then
         rm $rfile
+        attempt=1
         let run=$run+1
     else
         rm $rfile
         rm $dfile
+        let attempt=$attempt+1
         echo "Bad data. Retrying..."
     fi
 done # While loop instead of for loop because sometimes bad data should stop the counter variable from incrementing
