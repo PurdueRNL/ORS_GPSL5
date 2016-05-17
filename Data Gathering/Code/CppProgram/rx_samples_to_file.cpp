@@ -217,7 +217,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         ("subdev", po::value<std::string>(&subdev), "daughterboard subdevice specification")
         ("channels", po::value<std::string>(&channel_list)->default_value("0"), "which channel(s) to use (specify \"0\", \"1\", \"0,1\", etc)")
         ("bw", po::value<double>(&bw), "daughterboard IF filter bandwidth in Hz")
-        ("ref", po::value<std::string>(&ref)->default_value("internal"), "waveform type (internal, external, mimo)")
+        ("ref", po::value<std::string>(&ref)->default_value("gpsdo"), "waveform type (internal, external, mimo)")
         ("wirefmt", po::value<std::string>(&wirefmt)->default_value("sc16"), "wire format (sc8 or sc16)")
         ("cpufmt", po::value<std::string>(&cpufmt)->default_value("sc16"), "cpu format (sc8, sc16, fc32, or fc64)")
         ("setup", po::value<double>(&setup_time)->default_value(1.0), "seconds of setup time")

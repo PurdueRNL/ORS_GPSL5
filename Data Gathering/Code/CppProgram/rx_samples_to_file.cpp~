@@ -52,7 +52,7 @@ unsigned long long last_overflow_num_samps = 0;
 /***********************************************************************
  * Benchmark RX Rate
  **********************************************************************/
-// This function actually collects the XM data.
+// This function actually collects the XM data
 void benchmark_rx_rate(
     uhd::usrp::multi_usrp::sptr usrp,
     const std::string &rx_cpu,
@@ -79,7 +79,6 @@ void benchmark_rx_rate(
     // create a separate output file for each channel
     std::ofstream outfile[num_chan];
     outfile[0].open((boost::format("%s") % dfile ).str().c_str(), std::ofstream::binary);
-
 
     bool had_an_overflow = false;
     uhd::time_spec_t last_time;
