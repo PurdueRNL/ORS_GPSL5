@@ -35,7 +35,7 @@ while ((run <= nfiles)); do
     echo "Creating file $dfile"
 
     # Run binary program, passing arguments through command line, to collect data
-    ../CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --rfile "$rfile" --file1 "$dfile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
+    ../CppProgram/rx_samples_to_file --args "$addr" --time $rtime --nsamp $nsamp --rate $rate --subdev "$subdev" --freq $freq --channels "0" --rfile "$rfile" --dfile "$dfile" --gain $gain  --wirefmt "$dtype" --cpufmt "$dtype"
 
     # Grab value of drops+overflows from log file
     log=$(<$rfile)
