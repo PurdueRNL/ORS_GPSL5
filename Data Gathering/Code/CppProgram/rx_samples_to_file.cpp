@@ -13,7 +13,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
 
 #include <uhd/types/tune_request.hpp>
 #include <uhd/utils/thread_priority.hpp>
@@ -194,13 +193,21 @@ bool check_locked_sensor(std::vector<std::string> sensor_names, const char* sens
 	return true;
 }
 
+// This function is the main function
 int UHD_SAFE_MAIN(int argc, char *argv[]){
-    uhd::set_thread_priority_safe();
-
-    //variables to be set by po
+    // Declare variables
+    po::variables_map vm;
     std::string args, dfile, rfile, ant, subdev, ref, wirefmt, cpufmt, channel_list;
-    size_t total_num_samps;
-    double rate, freq, gain, bw, total_time, setup_time, total_runs;
+    std::vector<std::string> channel_strings;
+    std::vector<size_t> channel_nums;
+    std::time_t ltime;
+    boost::thread_group thread_group;
+    size_t total_num_samps, ch, chan, i;
+    double rate, freq, gain, bw, total_time, setup_time, runs_this, wire_rate, cpu_rate, etime1, etime2, sleep_time;
+    bool bw_summary;
+    int nrun;
+
+    uhd::set_thread_priority_safe();
 
     //setup the program options
     po::options_description desc("Allowed options");
@@ -209,7 +216,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         ("args", po::value<std::string>(&args)->default_value(""), "multi uhd device address args")
         ("dfile", po::value<std::string>(&dfile)->default_value("usrp_samples_A.dat"), "name of the file 1 to write binary samples to")
         ("rfile", po::value<std::string>(&rfile)->default_value("usrp_log.txt"), "name of the file to write overflow info to")
-        ("total_runs", po::value<double>(&total_runs)->default_value(1), "how many times the program should run")
+        ("runs_this", po::value<double>(&runs_this)->default_value(1), "how many times the program should run")
         ("nsamps", po::value<size_t>(&total_num_samps)->default_value(0), "total number of samples to receive")
         ("time", po::value<double>(&total_time)->default_value(0), "total number of seconds to receive")
         ("rate", po::value<double>(&rate)->default_value(1e6), "rate of incoming samples")
@@ -227,7 +234,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         ("skip-lo", "skip checking LO lock status")
         ("int-n", "tune USRP with integer-N tuning")
     ;
-    po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
 
@@ -237,9 +243,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         return ~0;
     }
 
-
-
-    bool bw_summary = vm.count("progress") > 0;
+    bw_summary = vm.count("progress") > 0;
 
     //create a usrp device
     std::cout << std::endl;
@@ -247,25 +251,23 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     //Lock mboard clocks
     usrp->set_clock_source(ref);
-// hereere
+    //\\//\\//\\//\\//\\ HERE IS WHERE CLOCK SETTING STUFF GOES //\\//\\//\\//\\//\\
 
     //always select the subdevice first, the channel mapping affects the other settings
     if (vm.count("subdev")) usrp->set_rx_subdev_spec(subdev);
-
 
     //set the sample rate
     if (rate <= 0.0){
         std::cerr << "Please specify a valid sample rate" << std::endl;
         return ~0;
     }
+
     usrp->set_rx_rate(rate);
 
     //detect which channels to use
-    std::vector<std::string> channel_strings;
-    std::vector<size_t> channel_nums;
     boost::split(channel_strings, channel_list, boost::is_any_of("\"',"));
-    for(size_t ch = 0; ch < channel_strings.size(); ch++){
-        size_t chan = boost::lexical_cast<int>(channel_strings[ch]);
+    for(ch = 0; ch < channel_strings.size(); ch++){
+        chan = boost::lexical_cast<int>(channel_strings[ch]);
         if(chan >= usrp->get_rx_num_channels()){
             throw std::runtime_error("Invalid channel(s) specified.");
         }
@@ -276,7 +278,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     if (vm.count("freq")){	//with default of 0.0 this will always be true
         uhd::tune_request_t tune_request(freq);
         if(vm.count("int-n")) tune_request.args = uhd::device_addr_t("mode_n=integer");
-        for(size_t i=0; i<channel_nums.size(); i++) {
+        for(i=0; i<channel_nums.size(); i++) {
             usrp->set_rx_freq(tune_request, channel_nums[i]);
         }
         std::cout << std::endl;
@@ -284,7 +286,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     //set the rf gain
     if (vm.count("gain")){
-        for(size_t i=0; i<channel_nums.size(); i++) {
+        for(i=0; i<channel_nums.size(); i++) {
             usrp->set_rx_gain(gain, channel_nums[i]);
         }
         std::cout << std::endl;
@@ -292,7 +294,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     //set the IF filter bandwidth
     if (vm.count("bw")){
-        for(size_t i=0; i<channel_nums.size(); i++) {
+        for(i=0; i<channel_nums.size(); i++) {
             usrp->set_rx_bandwidth(bw, channel_nums[i]);
         }
         std::cout << std::endl;
@@ -300,7 +302,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     //set the antenna
     if (vm.count("ant")){
-        for(size_t i=0; i<channel_nums.size(); i++){
+        for(i=0; i<channel_nums.size(); i++){
             usrp->set_rx_antenna(ant, channel_nums[i]);
         }
     }
@@ -316,80 +318,71 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 			check_locked_sensor(usrp->get_mboard_sensor_names(0), "ref_locked", boost::bind(&uhd::usrp::multi_usrp::get_mboard_sensor, usrp, _1, 0), setup_time);
 	}
 
-
-
     //create a receive streamer
     uhd::stream_args_t stream_args(cpufmt,wirefmt);
     stream_args.channels = channel_nums;
     uhd::rx_streamer::sptr rx_stream = usrp->get_rx_stream(stream_args);
 
-
     //print pre-test info
-    double wire_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(wirefmt);
-    double cpu_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(cpufmt);
+    wire_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(wirefmt);
+    cpu_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(cpufmt);
 
     // Setup Ctrl-C interrupt handler 
     std::signal(SIGINT, &sig_int_handler);
     std::cout << "Press Ctrl + Z to abort..." << std::endl << std::endl;
 
-    boost::thread_group thread_group;
-    std::time_t ltime;
+    nrun = 1;
 
-int nrun = 1;
-while (nrun <= total_runs) {
+    while (nrun <= runs_this) {
+        time(&ltime);
+        dfile = "../../Data/XMTest_" + boost::to_string(ltime) + ".dat";  
 
-    time(&ltime);
-    //dfile = "../../Data/XMTest_" + boost::to_string(std::asctime(std::localtime(&ltime))) + ".dat";
-    dfile = "../../Data/XMTest_" + boost::to_string(ltime) + ".dat";  
+        //spawn the receive test thread
+        thread_group.create_thread(boost::bind(&benchmark_rx_rate, usrp, cpufmt, rx_stream, dfile, total_num_samps));
 
-    //spawn the receive test thread
-    thread_group.create_thread(boost::bind(&benchmark_rx_rate, usrp, cpufmt, rx_stream, dfile, total_num_samps));
+        //Wait for the desired time interval and then stop the receive test thread
+        //Also, monitor the progress along the way
+        sleep_time = total_time + 0.1;
+        boost::system_time start = boost::get_system_time();
+        boost::system_time previous = start;
 
-    //Wait for the desired time interval and then stop the receive test thread
-    //Also, monitor the progress along the way
-    double sleep_time = total_time + 0.1;
-    boost::system_time start = boost::get_system_time();
-    boost::system_time previous = start;
-    while (not stop_signal_called) {
-        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-        boost::system_time now = boost::get_system_time();
+        while (not stop_signal_called) {
+            boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+            boost::system_time now = boost::get_system_time();
 
-        double etime1 = elapsed_time(now,start);
-        if (etime1 > sleep_time) break;
+            etime1 = elapsed_time(now,start);
+            if (etime1 > sleep_time) break;
 
-        if (num_dropped_samps != 0) break;
+            if (num_dropped_samps != 0) break;
 
 
-        if (bw_summary) {
-            double etime2 = elapsed_time(now,previous);
-            if (etime2 > 1.0) {
-                std::cout << boost::format("Time elapsed (s): %0.1f; Received samps (MSa): %0.1f") % etime1 % (double(num_rx_samps)/1e6) << std::endl;
-                previous = now;
+            if (bw_summary) {
+                etime2 = elapsed_time(now,previous);
+                if (etime2 > 1.0) {
+                    std::cout << boost::format("Time elapsed (s): %0.1f; Received samps (MSa): %0.1f") % etime1 % (double(num_rx_samps)/1e6) << std::endl;
+                    previous = now;
+                }
             }
         }
+        nrun++;
+
+        // Interrupt and join the threads
+        thread_group.interrupt_all();
+        thread_group.join_all();
+
+        // Remove datafile if there were drops or overflows and alert user of progress
+        if ((num_overflows + num_dropped_samps) > 0) {
+            std::remove(dfile.c_str());
+            std::cout << "-";
+            std::cout.flush();
+        }
+        else {
+            std::cout << "+";
+            std::cout.flush();
+        }
+        std::cout << num_dropped_samps;
+        std::cout.flush();
     }
-nrun++;
-//interrupt and join the threads
-    thread_group.interrupt_all();
-    thread_group.join_all();
-
-}
-
-    
-
-    //print summary
-    std::cout << std::endl << boost::format(
-        "Summary:\n"
-        "  Num received samples:    %u\n"
-        "  Num dropped samples:     %u\n"
-        "  Num overflows detected:  %u\n"
-        "  - Last overflow sample num: %u\n"
-    ) % num_rx_samps % num_dropped_samps % num_overflows % last_overflow_num_samps  << std::endl;
-    std::ofstream logfile;
-
-      logfile.open((boost::format("%s") % rfile ).str().c_str());
-      logfile << boost::format("%u") % (num_overflows + num_dropped_samps);
-      logfile.close();
 
     return EXIT_SUCCESS;
 }
