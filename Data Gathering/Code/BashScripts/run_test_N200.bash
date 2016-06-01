@@ -7,8 +7,8 @@ gain=40 # dB
 rtime=1 # sec
 addr="addr=192.168.10.2" # IP address of N200
 dtype="sc8" # Data type
-to_collect=3600 # Number of datafiles to collect before reconnecting to N200
-nfiles=3600 # Total number of datafiles to collect
+to_collect=14400 # Number of datafiles to collect before reconnecting to N200
+nfiles=14400 # Total number of datafiles to collect
 
 sudo sysctl -w net.core.rmem_max=480000000
 sudo sysctl -w net.core.wmem_max=480000000

@@ -202,8 +202,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     std::cout << boost::format("Bandwidth   %0.1f		MHz") % (usrp->get_rx_bandwidth(0)/1e6) << std::endl << std::endl;
 
     int times_dropped = 0;
-    int file_time_avg = 0;
 	int f = 0;
+    int file_time_avg = 0;
 	while (f < to_collect) {
 		
 		if ((acc_rx_samps>rate) || (f==0)){
@@ -252,7 +252,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 			}
 		}
 
-			f++;
+		f++;
 		size_t num_rx_samps = rx_stream->recv(buff_ptrs, samps_per_buff, md, timeout);
 		last_time = md.time_spec;
 		
@@ -295,11 +295,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         old_file_time = new_file_time;
         new_file_time = boost::posix_time::microsec_clock::local_time();
         file_time_diff = new_file_time - old_file_time;
-        file_time_avg += file_time_diff.total_microseconds();
-        //std::cout << boost::to_string(file_time_diff.total_microseconds() - 1000000) << "  " << boost::to_string(file_time_avg) << "  " << boost::to_string(f) << "  " << boost::to_string((file_time_avg / f) - 1000000) << "  " << boost::to_string(times_dropped) << std::endl;
-        std::cout << boost::format("%7d  %12d  %4d  %7d  %d") % file_time_diff.total_microseconds() % file_time_avg % f % (file_time_avg / f - 1000000) % times_dropped << std::endl;
+        file_time_avg += (file_time_diff.total_microseconds() - 1000000);
 
-	} // End loop
+        // Report statistics to user
+        std::cout << boost::format("%7d  %12d  %4d  %7d  %d") % file_time_diff.total_microseconds() % file_time_avg % f % (file_time_avg / f) % times_dropped << std::endl;
+
+	} // End main loop
 	
 	if (outfile[0].is_open()) outfile[0].close();
 	
