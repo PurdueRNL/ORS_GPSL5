@@ -177,7 +177,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     boost::posix_time::ptime old_file_time;
     boost::posix_time::ptime new_file_time;
     boost::posix_time::time_duration file_time_diff;
-    new_file_time = boost::posix_time::second_clock::local_time();
+    new_file_time = 1000;
 	time_t rawtime;
 	struct tm * timeinfo;
 	char time_str [18];

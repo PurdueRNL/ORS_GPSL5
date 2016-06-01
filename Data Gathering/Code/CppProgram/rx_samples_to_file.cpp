@@ -13,12 +13,15 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// 
+// Modified by Henry Heim at Purdue University
 
 #include <uhd/types/tune_request.hpp>
 #include <uhd/utils/thread_priority.hpp>
 #include <uhd/convert.hpp>
 #include <uhd/utils/safe_main.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
+#include <uhd/usrp/gps_ctrl.hpp>
 #include <uhd/exception.hpp>
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
@@ -41,17 +44,15 @@ double elapsed_time(const boost::system_time t2, const boost::system_time t1)
     return double((t2-t1).ticks()) / boost::posix_time::time_duration::ticks_per_second();
 }
 
-/***********************************************************************
- * Test result variables
- **********************************************************************/
+// Global variables
 unsigned long long num_overflows = 0;
 unsigned long long num_rx_samps = 0;
 unsigned long long num_dropped_samps = 0;
 unsigned long long last_overflow_num_samps = 0;
 
 /***********************************************************************
- * Benchmark RX Rate
- **********************************************************************/
+ *                            Benchmark RX rate
+ ***********************************************************************/
 // This function actually collects the XM data
 void benchmark_rx_rate(
     uhd::usrp::multi_usrp::sptr usrp,
@@ -115,7 +116,7 @@ void benchmark_rx_rate(
         case uhd::rx_metadata_t::ERROR_CODE_NONE:
             if (had_an_overflow){
                 had_an_overflow = false;
-                num_dropped_samps += (md.time_spec - last_time).to_ticks(rate);
+                num_dropped_samps = (md.time_spec - last_time).to_ticks(rate);
             }
             break;
 
@@ -149,6 +150,10 @@ void benchmark_rx_rate(
 
 typedef boost::function<uhd::sensor_value_t (const std::string&)> get_sensor_fn_t;
 
+
+/***********************************************************************
+ *                        Check locked sensor
+ ***********************************************************************/
 bool check_locked_sensor(std::vector<std::string> sensor_names, const char* sensor_name, get_sensor_fn_t get_sensor_fn, double setup_time){
 	if (std::find(sensor_names.begin(), sensor_names.end(), sensor_name) == sensor_names.end())
 		return false;
@@ -193,7 +198,9 @@ bool check_locked_sensor(std::vector<std::string> sensor_names, const char* sens
 	return true;
 }
 
-// This function is the main function
+/***********************************************************************
+ *                           Main function
+ ***********************************************************************/
 int UHD_SAFE_MAIN(int argc, char *argv[]){
     // Declare variables
     po::variables_map vm;
@@ -245,18 +252,18 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     bw_summary = vm.count("progress") > 0;
 
-    //create a usrp device
+    // Create the USRP device
     std::cout << std::endl;
     uhd::usrp::multi_usrp::sptr usrp = uhd::usrp::multi_usrp::make(args);
 
-    //Lock mboard clocks
+    // Set clocks
     usrp->set_clock_source(ref);
-    //\\//\\//\\//\\//\\ HERE IS WHERE CLOCK SETTING STUFF GOES //\\//\\//\\//\\//\\
+    usrp->set_time_source(ref);
 
-    //always select the subdevice first, the channel mapping affects the other settings
+    // Set subdevice
     if (vm.count("subdev")) usrp->set_rx_subdev_spec(subdev);
 
-    //set the sample rate
+    // Verify sample rate
     if (rate <= 0.0){
         std::cerr << "Please specify a valid sample rate" << std::endl;
         return ~0;
@@ -264,7 +271,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     usrp->set_rx_rate(rate);
 
-    //detect which channels to use
+    // Detect channels
     boost::split(channel_strings, channel_list, boost::is_any_of("\"',"));
     for(ch = 0; ch < channel_strings.size(); ch++){
         chan = boost::lexical_cast<int>(channel_strings[ch]);
@@ -274,7 +281,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         else channel_nums.push_back(boost::lexical_cast<int>(channel_strings[ch]));
     }
 
-    //set the center frequency
+    // Set center frequency
     if (vm.count("freq")){	//with default of 0.0 this will always be true
         uhd::tune_request_t tune_request(freq);
         if(vm.count("int-n")) tune_request.args = uhd::device_addr_t("mode_n=integer");
@@ -284,7 +291,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         std::cout << std::endl;
 	}
 
-    //set the rf gain
+    // Set gain
     if (vm.count("gain")){
         for(i=0; i<channel_nums.size(); i++) {
             usrp->set_rx_gain(gain, channel_nums[i]);
@@ -292,7 +299,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         std::cout << std::endl;
     }
 
-    //set the IF filter bandwidth
+    // Set bandwidth
     if (vm.count("bw")){
         for(i=0; i<channel_nums.size(); i++) {
             usrp->set_rx_bandwidth(bw, channel_nums[i]);
@@ -300,16 +307,17 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         std::cout << std::endl;
     }
 
-    //set the antenna
+    // Set antenna
     if (vm.count("ant")){
         for(i=0; i<channel_nums.size(); i++){
             usrp->set_rx_antenna(ant, channel_nums[i]);
         }
     }
 
-    boost::this_thread::sleep(boost::posix_time::seconds(setup_time)); //allow for some setup time
+    // Allow for some USRP setup time
+    boost::this_thread::sleep(boost::posix_time::seconds(setup_time));
 
-    //check Ref and LO Lock detect
+    // Check lo_lock detect
     if (not vm.count("skip-lo")){
 		check_locked_sensor(usrp->get_rx_sensor_names(0), "lo_locked", boost::bind(&uhd::usrp::multi_usrp::get_rx_sensor, usrp, _1, 0), setup_time);
 		if (ref == "mimo")
@@ -318,26 +326,31 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 			check_locked_sensor(usrp->get_mboard_sensor_names(0), "ref_locked", boost::bind(&uhd::usrp::multi_usrp::get_mboard_sensor, usrp, _1, 0), setup_time);
 	}
 
-    //create a receive streamer
+    // Create a receive streamer
     uhd::stream_args_t stream_args(cpufmt,wirefmt);
     stream_args.channels = channel_nums;
     uhd::rx_streamer::sptr rx_stream = usrp->get_rx_stream(stream_args);
 
-    //print pre-test info
+    // Set wire and cpu rates
     wire_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(wirefmt);
     cpu_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(cpufmt);
 
-    // Setup Ctrl-C interrupt handler 
+    // Setup interrupt handler
     std::signal(SIGINT, &sig_int_handler);
     std::cout << "Press Ctrl + Z to abort..." << std::endl << std::endl;
 
+    // Initialize loop counter variable
     nrun = 1;
 
+    // This loop calls the 'benchmark_rx_rate' function 'runs_this' times. Each call gives a new timestamp for file naming.
     while (nrun <= runs_this) {
-        time(&ltime);
-        dfile = "../../Data/XMTest_" + boost::to_string(ltime) + ".dat";  
+        // Get time from GPSDO
+        uhd::sensor_value_t time_now = usrp->get_mboard_sensor("gps_time");
 
-        //spawn the receive test thread
+        // Set filename to new time
+        dfile = "../../Data/XMTest_" + boost::to_string(time_now.to_int()) + ".dat";  
+
+        // Spawn the data receiving thread and assign benchmark_rx_rate function (with updated parameters) to new thread
         thread_group.create_thread(boost::bind(&benchmark_rx_rate, usrp, cpufmt, rx_stream, dfile, total_num_samps));
 
         //Wait for the desired time interval and then stop the receive test thread
@@ -345,6 +358,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         sleep_time = total_time + 0.1;
         boost::system_time start = boost::get_system_time();
         boost::system_time previous = start;
+
+
+        //\\//\\//\\//\\//\\ I DON"T KNOW WHAT THIS DOES //\\//\\//\\//\\//\\
 
         while (not stop_signal_called) {
             boost::this_thread::sleep(boost::posix_time::milliseconds(100));
@@ -355,7 +371,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
             if (num_dropped_samps != 0) break;
 
-
             if (bw_summary) {
                 etime2 = elapsed_time(now,previous);
                 if (etime2 > 1.0) {
@@ -364,24 +379,27 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
                 }
             }
         }
-        nrun++;
+
+        //\\//\\//\\//\\//\\     //\\//\\//\\//\\//\\     //\\//\\//\\//\\//\\
+
 
         // Interrupt and join the threads
         thread_group.interrupt_all();
         thread_group.join_all();
 
-        // Remove datafile if there were drops or overflows and alert user of progress
-        if ((num_overflows + num_dropped_samps) > 0) {
+        // Remove datafile if there were drops or overflows, alert user of progress, and increment counter variable if applicable
+        if (num_dropped_samps > 0) {
             std::remove(dfile.c_str());
             std::cout << "-";
+            std::cout << num_dropped_samps;
             std::cout.flush();
+            num_dropped_samps = 0;
         }
         else {
             std::cout << "+";
             std::cout.flush();
+            nrun++;
         }
-        std::cout << num_dropped_samps;
-        std::cout.flush();
     }
 
     return EXIT_SUCCESS;

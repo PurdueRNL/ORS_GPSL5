@@ -10,7 +10,7 @@ Ti = 0.001; % integration time
 sample_num = floor(fs*Ti);
 
 % Open datafile
-pfile = fopen('/home/rnl_lab/ORS_GPSL5/Data Gathering/Data/XMTest_1464119599.dat');
+pfile = fopen('/home/rnl_lab/ORS_GPSL5/Data Gathering/Data/XMTest_1464346854.dat');
 
 xR = [];
 xR2 = [];
