@@ -32,7 +32,7 @@ while (($run <= ($nfiles / $to_collect))); do
     rfile="../../Data/XMTest_${tstamp}.txt" # Log file
 
     # Calculate batch number
-    let num_batch=$nfiles/$runs_this
+    let num_batch=$nfiles/$to_collect
 
     # Report file status
     clear

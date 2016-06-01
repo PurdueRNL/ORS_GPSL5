@@ -40,7 +40,7 @@ while (($run <= ($nfiles / $to_collect))); do
     echo "Creating files starting at $dfile"
 
     # Run binary program, passing arguments through command line, to collect data
-    ../CppProgram/Other/rx_multi_samplesv3 --args "$addr" --time $rtime --to_collect $to_collect --rate $rate --subdev "$subdev" --freq $freq --dfile "$dfile" --gain "$gain" --wirefmt "$dtype" --cpufmt "$dtype"
+    ../CppProgram/Other/rx_multi_samplesv3 --args "$addr" --time $rtime --to_collect $to_collect --rate $rate --subdev "$subdev" --freq $freq --file "$dfile" --gain "$gain" --wirefmt "$dtype" --cpufmt "$dtype"
 
     # Increment loop counter variable
     let run=$run+1
