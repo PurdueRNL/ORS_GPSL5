@@ -2,7 +2,7 @@
 
 ## Inputs ##
 freqIn=1.57542 # GHz
-rateIn=10 # MHz
+rateIn=25 # MHz
 gain=40 # dB
 rtime=1 # sec
 addr="addr=192.168.10.2" # IP address of N200

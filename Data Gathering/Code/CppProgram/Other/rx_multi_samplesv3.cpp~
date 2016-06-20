@@ -174,10 +174,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 	unsigned long long last_overflow_num_samps = 0;	
 	size_t acc_rx_samps = 0;	
 	
-    int old_file_time;
-    int new_file_time;
-    int file_time_diff;
-    new_file_time = boost::posix_time::second_clock::local_time().total_microseconds();
+    boost::posix_time::ptime old_file_time;
+    boost::posix_time::ptime new_file_time;
+    boost::posix_time::time_duration file_time_diff;
+    new_file_time = boost::posix_time::second_clock::local_time();
 	time_t rawtime;
 	struct tm * timeinfo;
 	char time_str [18];
@@ -293,12 +293,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
         // Find time delta
         old_file_time = new_file_time;
-        new_file_time = boost::posix_time::microsec_clock::local_time().total_microseconds();
+        new_file_time = boost::posix_time::microsec_clock::local_time();
         file_time_diff = new_file_time - old_file_time;
-        file_time_avg += (file_time_diff - 1000000);
+        file_time_avg += (file_time_diff.total_microseconds() - 1000000);
 
         // Report statistics to user
-        std::cout << boost::format("%7d  %12d  %4d  %7d  %d") % file_time_diff % file_time_avg % f % (file_time_avg / f) % times_dropped << std::endl;
+        std::cout << boost::format("%7d  %12d  %4d  %7d  %d") % file_time_diff.total_microseconds() % file_time_avg % f % (file_time_avg / f) % times_dropped << std::endl;
 
 	} // End main loop
 	

@@ -137,7 +137,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     stream_args.channels = channel_nums;
     uhd::rx_streamer::sptr rx_stream = usrp->get_rx_stream(stream_args);
 	const size_t samps_per_buff = rate*total_time;
-	const size_t samps_per_temp = rate; 	
+	const size_t samps_per_temp = rate;
 	//print pre-test info
     double wire_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(wirefmt);
     double cpu_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(cpufmt);
