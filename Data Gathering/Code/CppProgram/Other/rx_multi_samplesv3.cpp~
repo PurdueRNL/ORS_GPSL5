@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-// Modified by Zenki @ Purdue
-// Furthur modified by hheim @ Purdue
+// Modified by Zenki @ Purdue and hheim @ Purdue
 
 #include <uhd/types/tune_request.hpp>
 #include <uhd/utils/thread_priority.hpp>
@@ -51,7 +50,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     //variables to be set by po
     std::string args, file, type, ant, subdev, ref, wirefmt, cpufmt;
     size_t total_num_samps, spb;
-    double rate, freq, gain, bw, total_time, setup_time, to_collect;
+    double rate, freq, gain, bw, total_time, setup_time, to_collect, section_amount;
 	
     //setup the program options
     po::options_description desc("Allowed options");
@@ -62,7 +61,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         ("type", po::value<std::string>(&type)->default_value("short"), "sample type: double, float, or short")
         ("time", po::value<double>(&total_time), "(DEPRECATED) will go away soon! Use --duration instead")
         ("spb", po::value<size_t>(&spb)->default_value(10000), "samples per buffer")
-        ("to_collect", po::value<double>(&to_collect), "number of sampling runs to collect in this file")
+        ("to_collect", po::value<double>(&to_collect), "number of files to collect before reconnecting")
+        ("section_amount", po::value<double>(&section_amount), "number of sections to collect in each file")
         ("rate", po::value<double>(&rate)->default_value(1e6), "rate of incoming samples")
         ("freq", po::value<double>(&freq)->default_value(0.0), "RF center frequency in Hz")
         ("gain", po::value<double>(&gain)->default_value(0.0), "gain for the RF chain")
@@ -112,7 +112,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 	uhd::tune_request_t tune_request(freq);
 	usrp->set_rx_freq(tune_request, 0);
 
-	
 	// Set gain
 	usrp->set_rx_gain(gain, 0);
 	
@@ -137,7 +136,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     stream_args.channels = channel_nums;
     uhd::rx_streamer::sptr rx_stream = usrp->get_rx_stream(stream_args);
 	const size_t samps_per_buff = rate*total_time;
-	const size_t samps_per_temp = rate; 	
+	const size_t samps_per_temp = rate;
 	//print pre-test info
     double wire_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(wirefmt);
     double cpu_rate = usrp->get_rx_rate()*rx_stream->get_num_channels()*uhd::convert::get_bytes_per_item(cpufmt);
@@ -161,9 +160,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     
 	// create files
 	std::ofstream outfile[2];
-	const char header[]={'P','U','R','D','U','E'};
-	const char subheader[]={'A','A','E','A','A','E'};
-	const char subend[]={'X','X'};
+
+    // Create headers/footers
+	char header[1024]={};
+	char subheader[1024]={};
+	char subfooter[1024]={};
 	
 	// start recording
 	bool had_an_overflow = false;
@@ -186,12 +187,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     //boost::thread_group thread_group;
 	//std::cout << boost::format("Time: %d") % (thread_group.size()) << std::endl;   
 	
-	
 	// Display settings
     std::cout << std::endl;
     std::cout << boost::format("Settings:") << std::endl;
     std::cout << boost::format("File        %s") % file << std::endl;
-    std::cout << boost::format("Amount      %d") % to_collect << std::endl;
+    std::cout << boost::format("Sections    %s") % section_amount << std::endl;
+    std::cout << boost::format("Reconnect   %d") % to_collect << std::endl;
     std::cout << boost::format("Time        %0.1f		Sec") % total_time << std::endl;
     std::cout << boost::format("CPU rate    %0.1f	MB/sec")  % (cpu_rate/1e6) << std::endl;
     std::cout << boost::format("Wire fmt    %d		Bytes") % (uhd::convert::get_bytes_per_item(wirefmt)) << std::endl;
@@ -199,110 +200,172 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     std::cout << boost::format("Gain        %0.1f	dB") % usrp->get_rx_gain(0)<< std::endl;
     std::cout << boost::format("Rate        %0.1f	MHz") % (usrp->get_rx_rate()/1e6) << std::endl;
     std::cout << boost::format("Frequency   %0.1f	MHz") % (usrp->get_rx_freq(0)/1e6) << std::endl;
-    std::cout << boost::format("Bandwidth   %0.1f		MHz") % (usrp->get_rx_bandwidth(0)/1e6) << std::endl << std::endl;
+    std::cout << boost::format("Bandwidth   %0.1f		MHz") % (usrp->get_rx_bandwidth(0)/1e6) << std::endl;
 
+    // Define signal environment (for writing to file header)
+    //for (size_t i = 0; i < 1; i++) {
+	    double sig_env[] = {cpu_rate,
+							usrp->get_rx_rate(),
+							channel_nums[0],
+							usrp->get_rx_gain(0),
+							usrp->get_rx_freq(0),
+							usrp->get_rx_bandwidth(0)
+	    };
+	//}
+
+    int section_count;
     int times_dropped = 0;
 	int f = 0;
     int file_time_avg = 0;
+    struct timeval tv;
+    struct timeval subheader_time;
+    double time_in_mill;
+    double subheader_offset;
+    std::string written_file;
+    std::string header_s;
+    std::string subheader_s;
+    std::string subfooter_s;
+    bool section_dropped;
+
 	while (f < to_collect) {
-		
-		if ((acc_rx_samps>rate) || (f==0)){
-			time(&rawtime);
-			timeinfo = localtime (&rawtime);
-			strftime(time_str,18,"%Y%m%dT%H%M%SZ",timeinfo);
+        section_count = 0;
 
-            // Open file (to write to it)
-			if (!outfile[0].is_open())
-                outfile[0].open((boost::format("%s") % file).str().c_str(), std::ofstream::binary);
+        // If we had access to GPS time (via a second unit), time_in_mill would be based on GPS time, not local time
+        gettimeofday(&tv, NULL);
+        time_in_mill = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
+        written_file = file + boost::lexical_cast<std::string>(time_in_mill) + ".dat";
 
-            // overflow checking
-			if (num_overflows>3) {
-				cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
-				rx_stream->issue_stream_cmd(cmd);
-				
-				boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-				cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
-				cmd.time_spec = usrp->get_time_now() + uhd::time_spec_t(start_delay);
-				cmd.stream_now = (buff_ptrs.size() == 1);
-				rx_stream->issue_stream_cmd(cmd);
-			}
-			
-			acc_rx_samps = 0;
-			num_overflows = 0;
-			num_normal = 0;
+        // Open file
+        outfile[0].open((boost::format("%s") % written_file).str().c_str(), std::ofstream::binary);
 
-            std::cout.flush();			
-			for (size_t i = 0; i < 1; i++) {
-					double sig_env[] = {cpu_rate,
-										usrp->get_rx_rate(),
-										channel_nums[i],
-										usrp->get_rx_gain(i),
-										usrp->get_rx_freq(i),
-										usrp->get_rx_bandwidth(i)
-					};
+        // Define header
+        header_s = "HEADER " + boost::lexical_cast<std::string>(sig_env) + " TIME:" + boost::lexical_cast<std::string>(time_in_mill) + " HEADERX";
+        strcpy(header, header_s.c_str());
+
+        // Write header
+        outfile[0].write((const char*)header, sizeof(header));
+
+        std::cout << std::endl << boost::format("File: %s") % written_file << std::endl;
+		while (section_count < section_amount) {
+		    if ((acc_rx_samps>rate) || (section_count==0)) {
+			    time(&rawtime);
+			    timeinfo = localtime (&rawtime);
+			    strftime(time_str,18,"%Y%m%dT%H%M%SZ",timeinfo);
+
+                // Open file (to write to it)
+			    if (!outfile[0].is_open()) { 
+                    //outfile[0].open((boost::format("%s") % written_file).str().c_str(), std::ofstream::binary);
 				
                     // Write header to file
-					outfile[i].write((const char*)header, sizeof(header));
+		            outfile[0].write((const char*)header, sizeof(header));
 
                     // Write signal environment information to file
-					outfile[i].write((const char*)sig_env, sizeof(sig_env));
+				    //outfile[0].write((const char*)sig_env, sizeof(sig_env));
 
                     // End header section
-					outfile[i].write((const char*)subend, sizeof(subend));		
-			}
-		}
+				    //outfile[0].write((const char*)subfooter, sizeof(subfooter));		
+                }
 
-		f++;
-		size_t num_rx_samps = rx_stream->recv(buff_ptrs, samps_per_buff, md, timeout);
-		last_time = md.time_spec;
+                // overflow checking
+			    if (num_overflows>3) {
+				    cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
+				    rx_stream->issue_stream_cmd(cmd);
+				
+				    boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+				    cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
+				    cmd.time_spec = usrp->get_time_now() + uhd::time_spec_t(start_delay);
+				    cmd.stream_now = (buff_ptrs.size() == 1);
+				    rx_stream->issue_stream_cmd(cmd);
+			    }
+			
+			    acc_rx_samps = 0;
+			    num_overflows = 0;
+			    num_normal = 0;
+
+                std::cout.flush();
+		    }
+
+		    section_count++;
+		    size_t num_rx_samps = rx_stream->recv(buff_ptrs, samps_per_buff, md, timeout);
+		    last_time = md.time_spec;
 		
-		acc_rx_samps += num_rx_samps;
-		
-		for (size_t i = 0; i < 1; i++) {
-			outfile[i].write((const char*)subheader, sizeof(subheader));
-			outfile[i].write((const char*)&num_rx_samps, sizeof(num_rx_samps));
-			outfile[i].write((const char*)subend, sizeof(subend));	
-			outfile[i].write((const char*)buff_ptrs[i], num_rx_samps*bytes_per_samp);	
-			outfile[i].flush();
-		}
+		    acc_rx_samps += num_rx_samps;
 
-        if (had_an_overflow) {
-            num_dropped_samps += (md.time_spec - last_time).to_ticks(rate);
-            times_dropped++;
-            std::cout << "D(" << boost::to_string(times_dropped) << ")" << std::endl;
-            had_an_overflow = false;
-        }
-        
-		switch(md.error_code){
-			case uhd::rx_metadata_t::ERROR_CODE_NONE:
-				num_normal++;
-                //if (!had_an_overflow) {std::cout << "+"; std::cout.flush();}
-				break;
-
-			case uhd::rx_metadata_t::ERROR_CODE_OVERFLOW:
-				num_overflows++;
-                had_an_overflow = true;
-				break;
-
-            case uhd::rx_metadata_t::ERROR_CODE_BAD_PACKET:
-                num_dropped_samps++;
+            if (had_an_overflow) {
+                num_dropped_samps = (md.time_spec - last_time).to_ticks(rate);
                 times_dropped++;
+                section_dropped = true;
                 std::cout << "D(" << boost::to_string(times_dropped) << ")" << std::endl;
-                break;
-		}
+                had_an_overflow = false;
+            }
+        
+		    switch(md.error_code) {
+			    case uhd::rx_metadata_t::ERROR_CODE_NONE:
+				    num_normal++;
+                    //if (!had_an_overflow) {std::cout << "+"; std::cout.flush();}
+				    break;
 
-        // Find time delta
-        old_file_time = new_file_time;
-        new_file_time = boost::posix_time::microsec_clock::local_time();
-        file_time_diff = new_file_time - old_file_time;
-        file_time_avg += (file_time_diff.total_microseconds() - 1000000);
+			    case uhd::rx_metadata_t::ERROR_CODE_OVERFLOW:
+				    num_overflows++;
+                    had_an_overflow = true;
+				    break;
 
-        // Report statistics to user
-        std::cout << boost::format("%7d  %12d  %4d  %7d  %d") % file_time_diff.total_microseconds() % file_time_avg % f % (file_time_avg / f) % times_dropped << std::endl;
+                case uhd::rx_metadata_t::ERROR_CODE_BAD_PACKET:
+                    num_dropped_samps++;
+                    times_dropped++;
+                    std::cout << "D(" << boost::to_string(times_dropped) << ")" << std::endl;
+                    break;
+		    }
 
-	} // End main loop
+            // Define subheader
+            gettimeofday(&subheader_time, NULL);
+            subheader_offset = (subheader_time.tv_sec) * 1000 + (subheader_time.tv_usec) / 1000;
+            subheader_offset -= time_in_mill;
+            subheader_s = "SUBHEADER " + boost::lexical_cast<std::string>(subheader_offset) + " SUBHEADERX";
+            strcpy(subheader, subheader_s.c_str());
+
+            // Define subfooter
+            subfooter_s = "SUBFOOTER " + boost::lexical_cast<std::string>(section_dropped) + " " + boost::lexical_cast<std::string>(num_dropped_samps) + " SUBFOOTERX";
+            strcpy(subfooter, subfooter_s.c_str());
+		
+            // Write to file
+		    for (size_t i = 0; i < 1; i++) {
+			    outfile[i].write((const char*)subheader, sizeof(subheader)); // Write subheader
+			    outfile[i].write((const char*)buff_ptrs[i], num_rx_samps*bytes_per_samp); // Write data
+			    outfile[i].write((const char*)subfooter, sizeof(subfooter)); // Write subfooter
+			    outfile[i].flush();
+		    }
+        
+            /*
+            For some reason, originally this was the code to write the data:        
+
+            for (size_t i = 0; i < 1; i++) {
+			    outfile[i].write((const char*)subheader, sizeof(subheader));
+			    outfile[i].write((const char*)&num_rx_samps, sizeof(num_rx_samps));
+			    outfile[i].write((const char*)footer, sizeof(footer));
+			    outfile[i].write((const char*)buff_ptrs[i], num_rx_samps*bytes_per_samp);
+			    outfile[i].flush();
+		    }
+
+            This has the subheader being written, then the integer amount of samples received, then the footer, then the data. That could be entirely intentional, but it doesn't mesh with the datafile structure I have in mind. Thus, it's here, commented out, instead of up there being run.
+            */
+
+            // Find time delta
+            old_file_time = new_file_time;
+            new_file_time = boost::posix_time::microsec_clock::local_time();
+            file_time_diff = new_file_time - old_file_time;
+            file_time_avg += (file_time_diff.total_microseconds() - 1000000);
+
+            // Report statistics to user
+            std::cout << boost::format("%7d  %12d  %4d  %7d  %d") % file_time_diff.total_microseconds() % file_time_avg % section_count % (file_time_avg / section_count) % times_dropped << std::endl;
+
+            // Reset section_dropped
+            section_dropped = false;
+        }
+    f++;
 	
 	if (outfile[0].is_open()) outfile[0].close();
+	} // End main loop
 	
 	boost::this_thread::sleep(boost::posix_time::seconds(setup_time)); //allow for some setup time
 
