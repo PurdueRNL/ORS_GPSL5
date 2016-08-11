@@ -2,14 +2,14 @@
 
 ## Inputs ##
 freqIn=1.57542 # GHz
-rateIn=25 # MHz
+rateIn=40 # MHz
 gain=40 # dB
 rtime=1 # Length (in seconds) of one section
 addr="addr=192.168.10.2" # IP address of N200
 dtype="sc8" # Data type
-section_amount=10 # Number of sections in each file
-to_collect=6 # Number of files to collect before reconnecting
-nfiles=14400 # Total number of datafiles to collect (-1 for infinite)
+section_amount=7200 # Number of sections in each file
+to_collect=1 # Number of files to collect before reconnecting
+nfiles=1 # Total number of datafiles to collect (-1 for infinite)
 
 sudo sysctl -w net.core.rmem_max=480000000
 sudo sysctl -w net.core.wmem_max=480000000

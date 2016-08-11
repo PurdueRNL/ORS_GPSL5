@@ -239,7 +239,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
         outfile[0].open((boost::format("%s") % written_file).str().c_str(), std::ofstream::binary);
 
         // Define header
-        header_s = "HEADER " + boost::lexical_cast<std::string>(sig_env) + " TIME:" + boost::lexical_cast<std::string>(time_in_mill) + " HEADERX";
+        header_s = "HEADER " + boost::lexical_cast<std::string>(sig_env) + " TIME:" + boost::lexical_cast<std::string>(time_in_mill);
+        header_s.resize(1024-8, '0');
+        header_s += " HEADERX";
         strcpy(header, header_s.c_str());
 
         // Write header
@@ -307,11 +309,15 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
             gettimeofday(&subheader_time, NULL);
             subheader_offset = (subheader_time.tv_sec) * 1000 + (subheader_time.tv_usec) / 1000;
             subheader_offset -= time_in_mill;
-            subheader_s = "SUBHEADER " + boost::lexical_cast<std::string>(subheader_offset) + " SUBHEADERX";
+            subheader_s = "SUBHEADER " + boost::lexical_cast<std::string>(subheader_offset);
+            subheader_s.resize(1024-11, '0');
+            subheader_s += " SUBHEADERX";
             strcpy(subheader, subheader_s.c_str());
 
             // Define subfooter
-            subfooter_s = "SUBFOOTER " + boost::lexical_cast<std::string>(section_dropped) + " " + boost::lexical_cast<std::string>(num_dropped_samps) + " SUBFOOTERX";
+            subfooter_s = "SUBFOOTER " + boost::lexical_cast<std::string>(section_dropped) + " " + boost::lexical_cast<std::string>(num_dropped_samps);
+            subfooter_s.resize(1024-11, '0');
+            subfooter_s += " SUBFOOTERX";
             strcpy(subfooter, subfooter_s.c_str());
 		
             // Write to file
@@ -355,6 +361,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 	
 	boost::this_thread::sleep(boost::posix_time::seconds(setup_time)); //allow for some setup time
 
-    std::cout << std::endl << std::endl << num_dropped_samps << std::endl;
+    std::cout << std::endl << std::endl << "DROPS: " << num_dropped_samps << std::endl;
     return EXIT_SUCCESS;
 }
