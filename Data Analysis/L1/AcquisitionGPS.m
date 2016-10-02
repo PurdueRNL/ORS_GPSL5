@@ -9,7 +9,7 @@ integrationTime = 0.001; % Integration time (seconds)
 stepSize = 333; % Doppler step size
 minDoppler = -5000; % Maximum doppler
 maxDoppler = 5000;  % Minimum doppler
-dataFile = 'W:\Work\Test Data\XMTest_20160801132419.dat';
+dataFile = '/home/rnl_lab/Desktop/XMTest_20160820212108.dat';
 cpuType = 'int16'; % CPU type of data
 
 % Compute constants
@@ -90,13 +90,13 @@ for PRN = 1:32
 
     [X, Y] = meshgrid(0:1023000 / sampleFreq:integrationTime * 1023000 - 1023000 / sampleFreq, minDoppler:stepSize:maxDoppler);
     figure
-    mesh(X, Y, sortedCorr);
-%     mesh(sortedCorr);
-    xlabel('Delay/chip');
-    ylabel('Doppler/Hz');
-    zlabel('Correlation');
-    t1 = strcat('Correlation for PRN', num2str(PRN));
-    title(t1);
-    xlim([0 integrationTime * 1023000]);
-    ylim([minDoppler maxDoppler]);
+%     mesh(X, Y, sortedCorr);
+% %     mesh(sortedCorr);
+%     xlabel('Delay/chip');
+%     ylabel('Doppler/Hz');
+%     zlabel('Correlation');
+%     t1 = strcat('Correlation for PRN', num2str(PRN));
+%     title(t1);
+%     xlim([0 integrationTime * 1023000]);
+%     ylim([minDoppler maxDoppler]);
 end
